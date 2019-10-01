@@ -10,6 +10,12 @@ use std::{
 static FST: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/map.fst"));
 
 fn main() {
+    #[cfg(debug_assertions)]
+    {
+        println!("DEBUG MODE MANY SYMBOLS WILL BE MISSING");
+        println!("This version of the program is intentionally missing most unicode symbols.");
+    }
+
     let arg_matches = arg::app_arguments().get_matches();
 
     match arg_matches.subcommand() {
