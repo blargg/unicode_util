@@ -4,6 +4,8 @@ mkShell {
     cargo
     rustc
     rls
+    unzip
+    curl
   ];
 
   RUST_BACKTRACE=1;

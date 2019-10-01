@@ -1,19 +1,28 @@
 use fst::*;
-use std::fs::File;
-use std::io::{self, BufReader};
-use std::path::Path;
-use std::env;
+use std::{
+    fs::File,
+    io::{self, BufReader},
+    path::Path,
+    process::Command,
+    env,
+};
 use xml::{
     attribute::OwnedAttribute,
     reader::{EventReader, XmlEvent},
 };
 
 fn main() {
-    write_unicode_map().unwrap();
+    let zip_path = "data.tmp/ucd.all.flat.zip";
+    let xml_path = "data.tmp/ucd.all.flat.xml";
+    if !Path::new(xml_path).is_file() {
+        download_ucd_all(zip_path);
+        unzip(zip_path);
+    }
+    write_unicode_map("data.tmp/ucd.all.flat.xml").unwrap();
 }
 
-fn write_unicode_map() -> fst::Result<()> {
-    let mut associations = parse_file().unwrap();
+fn write_unicode_map(ucd_xml_path: &str) -> fst::Result<()> {
+    let mut associations = parse_file(ucd_xml_path).unwrap();
     associations.sort_by(|x, y| x.0.cmp(&y.0));
     associations.dedup_by_key(|x| x.0.clone());
 
@@ -32,11 +41,44 @@ fn write_unicode_map() -> fst::Result<()> {
     Ok(())
 }
 
+/// Downloads the unicode files if they are not already stored on disk
+/// Creates the file in data.tmp directory. If the file already exits, this function will make no
+/// changes.
+fn download_ucd_all(dest_path: &str) {
+    let url = "http://www.unicode.org/Public/12.1.0/ucdxml/ucd.all.flat.zip";
+    if !Path::new(dest_path).is_file() {
+        println!("{} is not cached, downloading", dest_path);
+        let mut cmd = Command::new("curl");
+        cmd
+            .arg("-vs")
+            .arg(format!("-o{}", dest_path))
+            .arg("--create-dirs")
+            .arg(url);
+        println!("curl command: {:?}", cmd);
+        let status = cmd
+            .status()
+            .expect("failed to download unicode data");
+        assert!(status.success(), "curl exited with a non zero status");
+    }
+}
+
+const DATA_TMP_DIR: &'static str = "data.tmp";
+
+/// runs the unzip command on the given file
+fn unzip(path: &str) {
+    let status = Command::new("unzip")
+        .arg(format!("-d{}", DATA_TMP_DIR))
+        .arg(path)
+        .status()
+        .expect("failed to run unzip");
+    assert!(status.success(), "unzip exited with non zero status");
+}
+
 /// Reads the file, returns a string representing the latex string, and the unicode symbol
-fn parse_file() -> io::Result<Vec<(String, u64)>> {
+fn parse_file(ucd_xml_path: &str) -> io::Result<Vec<(String, u64)>> {
     // number base of the file's character encoding
     const BASE: u32 = 16;
-    let file = File::open("data/ucd.all.flat.xml")?;
+    let file = File::open(ucd_xml_path)?;
     let reader = BufReader::new(file);
     let parser = EventReader::new(reader);
 
