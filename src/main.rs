@@ -7,6 +7,8 @@ use std::{
     process::exit,
 };
 
+mod cli;
+
 static FST: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/map.fst"));
 
 fn main() {
@@ -16,7 +18,7 @@ fn main() {
         println!("This version of the program is intentionally missing most unicode symbols.");
     }
 
-    let arg_matches = arg::app_arguments().get_matches();
+    let arg_matches = cli::app_arguments().get_matches();
 
     match arg_matches.subcommand() {
         ("search", Some(matches)) => {
@@ -27,6 +29,9 @@ fn main() {
         }
         ("encode", Some(matches)) => {
             run_encode(matches);
+        }
+        ("generate_completions", Some(matches)) => {
+            run_generate_completions(matches);
         }
         (cmd, _) => {
             eprintln!("Command \"{}\" not found", cmd);
@@ -89,55 +94,29 @@ fn run_encode<'a>(matches: &ArgMatches<'a>) {
     }
 }
 
+/// Generates completion functions for the given shell.
+fn run_generate_completions<'a>(matches: &ArgMatches<'a>) {
+    let shell_string = matches.value_of("SHELL").unwrap();
+
+    use clap::Shell::*;
+    let shell_type = match shell_string {
+        "bash" => Bash,
+        "zsh" => Zsh,
+        "fish" => Fish,
+        "powershell" => PowerShell,
+        other => {
+            eprintln!("{} shell not supported.", other);
+            exit(1);
+        }
+    };
+    cli::app_arguments().gen_completions_to("unicode_util", shell_type, &mut std::io::stdout());
+}
+
 fn parse_hex_str(s: &str) -> Option<char> {
     let n = u64::from_str_radix(s, 16).ok()?;
     from_u64(n)
 }
 
-/// module for the name space of constant strings used for arguments
-mod arg {
-    use clap::*;
-
-    pub fn app_arguments<'a, 'b>() -> App<'a, 'b> {
-        App::new("unicode_tex")
-            .author("Tom Jankauski, tomjankauski@gmail.com")
-            .about("Converts a latex expression for a symbol to a unicode character")
-            .version(env!("CARGO_PKG_VERSION"))
-            .subcommand(seach_subcommand())
-            .subcommand(lookup_subcommand())
-            .subcommand(encode_subcommand())
-    }
-
-    fn seach_subcommand<'a, 'b>() -> App<'a, 'b> {
-        SubCommand::with_name("search")
-            .about("search character descriptions")
-            .arg(
-                Arg::with_name("QUERY")
-                .required(true)
-                .help("search expression")
-            )
-    }
-
-    fn lookup_subcommand<'a, 'b>() -> App<'a, 'b> {
-        SubCommand::with_name("lookup")
-            .about("Converts a character code to an actual character")
-            .arg(
-                Arg::with_name("CODE")
-                .required(true)
-                .help("utf-8 character code")
-            )
-    }
-
-    fn encode_subcommand<'a, 'b>() -> App<'a, 'b> {
-        SubCommand::with_name("encode")
-            .about("Converts a character into a character code")
-            .arg(
-                Arg::with_name("CHARACTER")
-                .required(true)
-                .help("utf-8 character")
-            )
-    }
-}
 
 fn from_u64(n: u64) -> Option<char> {
     u32::try_from(n)
