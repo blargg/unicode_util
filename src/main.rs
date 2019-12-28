@@ -38,8 +38,8 @@ fn main_err() -> MainResult<()> {
     let arg_matches = cli::app_arguments().get_matches();
 
     match arg_matches.subcommand() {
-        ("set", Some(matches)) => {
-            run_set(matches)?;
+        ("search", Some(matches)) => {
+            run_search(matches)?;
         }
         ("get", Some(matches)) => {
             run_get(matches)?;
@@ -77,9 +77,8 @@ fn run_get<'a>(matches: &ArgMatches<'a>) -> MainResult<()> {
     Ok(())
 }
 
-fn run_set<'a>(matches: &ArgMatches<'a>) -> MainResult<()> {
+fn run_search<'a>(matches: &ArgMatches<'a>) -> MainResult<()> {
     let unicode_map = mk_map();
-    let var_name = matches.value_of("VAR").unwrap();
     let query = matches.value_of("QUERY").unwrap();
 
     // Modify the regex
@@ -100,8 +99,9 @@ fn run_set<'a>(matches: &ArgMatches<'a>) -> MainResult<()> {
 
     let mut list_view = SelectView::new()
         .on_submit(|cursive: &mut Cursive, value: &u64| {
-            cursive.set_user_data(*value);
-            cursive.quit();
+            let c: char = from_u64(*value)
+                .expect( "Could not parse character");
+            cursive.add_layer(tui::save_prompt(c));
         });
 
     for (description, v) in results {
@@ -126,23 +126,55 @@ fn run_set<'a>(matches: &ArgMatches<'a>) -> MainResult<()> {
 
     siv.add_fullscreen_layer(list_view);
     siv.run();
-
-    let selection_code = siv.take_user_data::<u64>().ok_or("No character selected")?;
-    drop(siv); // restore terminal
-    let c: char = from_u64(selection_code).ok_or("Could not parse character")?;
-    let mut store = Store::load_file()
-        .map_err(|_| format!("Error loading Store file."))?;
-    store.saved.insert(var_name.to_string(), c);
-    store.save_file()
-        .map_err(|_| format!("Error saving Store file."))
+    Ok(())
 }
 
 mod tui {
-    use cursive::theme::Theme;
+    use cursive::{
+        Cursive,
+        theme::Theme,
+        views::*,
+        view::*,
+    };
+    use crate::store::Store;
+
     pub fn theme() -> Theme {
         let mut theme = Theme::default();
         theme.shadow = false;
         theme
+    }
+
+    pub fn save_prompt(val_to_save: char) -> Dialog {
+        Dialog::new()
+            .title("Save to")
+            .padding((1, 1, 1, 0))
+            .content(
+                EditView::new()
+                    .on_submit(move |cursive, var_name| save(cursive, var_name, val_to_save))
+                    .with_id("name")
+                    .fixed_width(20),
+            )
+            .button("Ok", move |s| {
+                let name = s.call_on_id(
+                    "name",
+                    |view: &mut EditView| view.get_content(),
+                ).unwrap();
+                save(s, &name, val_to_save);
+            })
+    }
+
+    fn save(s: &mut Cursive, var_name: &str, value: char) {
+        if var_name.is_empty() {
+            s.add_layer(Dialog::info("Enter a var name"));
+        } else {
+            let mut store = Store::load_file()
+                .expect("Error loading Store file.");
+            store.saved.insert(var_name.to_string(), value);
+            store.save_file()
+                .expect("Error saving Store file.");
+
+            s.quit();
+        }
     }
 }
 

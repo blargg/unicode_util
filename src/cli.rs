@@ -8,7 +8,7 @@ pub fn app_arguments<'a, 'b>() -> App<'a, 'b> {
         .version(env!("CARGO_PKG_VERSION"))
         .subcommand(lookup_subcommand())
         .subcommand(encode_subcommand())
-        .subcommand(set_subcommand())
+        .subcommand(search_subcommand())
         .subcommand(get_subcommand())
         .subcommand(generate_completions_subcommand())
 }
@@ -23,14 +23,9 @@ fn get_subcommand<'a, 'b>() -> App<'a, 'b> {
         )
 }
 
-fn set_subcommand<'a, 'b>() -> App<'a, 'b> {
-    SubCommand::with_name("set")
+fn search_subcommand<'a, 'b>() -> App<'a, 'b> {
+    SubCommand::with_name("search")
         .about("Search for a value, and save it for later use.")
-        .arg(
-            Arg::with_name("VAR")
-            .required(true)
-            .help("Variable name to save the character to. Can be retrieved with unicode_util get.")
-        )
         .arg(
             Arg::with_name("QUERY")
             .required(true)

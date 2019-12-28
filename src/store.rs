@@ -13,6 +13,7 @@ pub struct Store {
     pub saved: HashMap<String, char>,
 }
 
+#[derive(Debug)]
 pub enum StoreErr {
     Io(io::Error),
     TomlDe(toml::de::Error),
