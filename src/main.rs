@@ -19,6 +19,16 @@ use std::{
 static FST: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/map.fst"));
 
 fn main() {
+    match main_err() {
+        Err(s) => {
+            eprintln!("{}", s);
+            exit(1);
+        }
+        Ok(()) => {}
+    }
+}
+
+fn main_err() -> MainResult<()> {
     #[cfg(debug_assertions)]
     {
         eprintln!("DEBUG MODE: MANY SYMBOLS WILL BE MISSING.");
@@ -29,27 +39,26 @@ fn main() {
 
     match arg_matches.subcommand() {
         ("set", Some(matches)) => {
-            match run_set(matches) {
-                Ok(()) => (),
-                Err(msg) => eprintln!("{}", msg),
-            }
+            run_set(matches)?;
         }
         ("get", Some(matches)) => {
-            run_get(matches);
+            run_get(matches)?;
         }
         ("lookup", Some(matches)) => {
-            run_lookup(matches);
+            run_lookup(matches)?;
         }
         ("encode", Some(matches)) => {
-            run_encode(matches);
+            run_encode(matches)?;
         }
         ("generate_completions", Some(matches)) => {
-            run_generate_completions(matches);
+            run_generate_completions(matches)?;
         }
         (cmd, _) => {
-            eprintln!("Command \"{}\" not found", cmd);
+            return Err(format!("Command \"{}\" not found", cmd));
         }
     }
+
+    Ok(())
 }
 
 /// Makes a new copy of the map
@@ -57,23 +66,18 @@ fn mk_map() -> Map {
     Map::from_static_slice(FST).unwrap()
 }
 
-fn run_get<'a>(matches: &ArgMatches<'a>) {
+fn run_get<'a>(matches: &ArgMatches<'a>) -> MainResult<()> {
     let var_name = matches.value_of("VAR").unwrap();
-    let store = match Store::load_file() {
-        Ok(s) => s,
-        Err(_) => {
-            eprintln!("Error loading Store file.");
-            exit(1);
-        }
-    };
-    let val = store.saved.get(&var_name.to_string());
-    match val {
-        Some(val) => println!("{}", val),
-        None => eprintln!("{:?} is not saved.", var_name),
-    };
+    let store = Store::load_file()
+        .map_err(|_| format!("Error loading Store file."))?;
+    let val = store.saved.get(&var_name.to_string())
+        .ok_or(format!("{:?} is not saved.", var_name))?;
+    println!("{}", val);
+
+    Ok(())
 }
 
-fn run_set<'a>(matches: &ArgMatches<'a>) -> std::result::Result<(), String> {
+fn run_set<'a>(matches: &ArgMatches<'a>) -> MainResult<()> {
     let unicode_map = mk_map();
     let var_name = matches.value_of("VAR").unwrap();
     let query = matches.value_of("QUERY").unwrap();
@@ -142,28 +146,24 @@ mod tui {
     }
 }
 
-fn run_lookup<'a>(matches: &ArgMatches<'a>) {
+fn run_lookup<'a>(matches: &ArgMatches<'a>) -> MainResult<()> {
     let code = matches.value_of("CODE").unwrap();
-    if let Some(c) = parse_hex_str(code) {
-        println!("{}", c);
-    } else {
-        eprintln!("Could not parse \"{}\" into a character", code);
-        exit(1);
-    }
+    let c = parse_hex_str(code)
+        .ok_or(format!("Could not parse \"{}\" into a character", code))?;
+    println!("{}", c);
+    Ok(())
 }
 
-fn run_encode<'a>(matches: &ArgMatches<'a>) {
+fn run_encode<'a>(matches: &ArgMatches<'a>) -> MainResult<()> {
     let char_str = matches.value_of("CHARACTER").unwrap();
-    if let Some(c) = char_str.chars().next() {
-        println!("{:04X}", c as u32);
-    } else {
-        eprintln!("Encountered empty string");
-        exit(1);
-    }
+    let c = char_str.chars().next()
+        .ok_or(format!("Encountered empty string"))?;
+    println!("{:04X}", c as u32);
+    Ok(())
 }
 
 /// Generates completion functions for the given shell.
-fn run_generate_completions<'a>(matches: &ArgMatches<'a>) {
+fn run_generate_completions<'a>(matches: &ArgMatches<'a>) -> MainResult<()> {
     let shell_string = matches.value_of("SHELL").unwrap();
 
     use clap::Shell::*;
@@ -173,11 +173,11 @@ fn run_generate_completions<'a>(matches: &ArgMatches<'a>) {
         "fish" => Fish,
         "powershell" => PowerShell,
         other => {
-            eprintln!("{} shell not supported.", other);
-            exit(1);
+            return Err(format!("{} shell not supported.", other))
         }
     };
     cli::app_arguments().gen_completions_to("unicode_util", shell_type, &mut std::io::stdout());
+    Ok(())
 }
 
 fn parse_hex_str(s: &str) -> Option<char> {
@@ -191,3 +191,5 @@ fn from_u64(n: u64) -> Option<char> {
         .ok()
         .and_then(|n32| from_u32(n32))
 }
+
+type MainResult<A> = std::result::Result<A, String>;
