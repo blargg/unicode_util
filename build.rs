@@ -12,6 +12,7 @@ use xml::{
 };
 
 fn main() {
+    cargo_settings();
     let zip_path = "data.tmp/ucd.all.flat.zip";
     let xml_path = "data.tmp/ucd.all.flat.xml";
     if !Path::new(xml_path).is_file() {
@@ -19,6 +20,10 @@ fn main() {
         unzip(zip_path);
     }
     write_unicode_map("data.tmp/ucd.all.flat.xml").unwrap();
+}
+
+fn cargo_settings() {
+    println!("cargo:rerun-if-changed=build.rs");
 }
 
 fn write_unicode_map(ucd_xml_path: &str) -> fst::Result<()> {
@@ -104,14 +109,6 @@ fn parse_file(ucd_xml_path: &str) -> io::Result<Vec<(String, u64)>> {
                 std::process::exit(1);
             }
             _ => {}
-        }
-
-        // in debug mode, load a subset of symbols
-        #[cfg(debug_assertions)]
-        {
-            if associations.len() >= 1000 {
-                break;
-            }
         }
     }
 

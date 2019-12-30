@@ -29,12 +29,6 @@ fn main() {
 }
 
 fn main_err() -> MainResult<()> {
-    #[cfg(debug_assertions)]
-    {
-        eprintln!("DEBUG MODE: MANY SYMBOLS WILL BE MISSING.");
-        eprintln!("This version of the program is intentionally missing most unicode symbols.");
-    }
-
     let arg_matches = cli::app_arguments().get_matches();
 
     match arg_matches.subcommand() {
