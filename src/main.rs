@@ -1,15 +1,13 @@
 mod cli;
 mod store;
+mod tui;
 
-use crate::store::Store;
-use clap::*;
-use cursive::{
-    *,
-    event::*,
-    views::*,
+use crate::{
+    store::Store,
+    tui::character_search,
 };
+use clap::*;
 use fst::*;
-use fst_regex::Regex;
 use std::{
     char::from_u32,
     convert::TryFrom,
@@ -72,104 +70,13 @@ fn run_get<'a>(matches: &ArgMatches<'a>) -> MainResult<()> {
 }
 
 fn run_search<'a>(matches: &ArgMatches<'a>) -> MainResult<()> {
-    let unicode_map = mk_map();
     let query = matches.value_of("QUERY").unwrap();
-
-    // Modify the regex
-    // Case insensitive, and allows leading and trailing characters
-    let regex_string = format!("(?i).*{}.*", query);
-    let re = Regex::new(regex_string.as_str())
-        .map_err(|e| format!( "Regex \"{}\" failed to compile.\n{}", regex_string, e))?;
-
-    let results = unicode_map
-        .search(&re)
-        .into_stream()
-        .into_str_vec()
-        .expect("convert keys to utf-8");
-
-    let mut siv = Cursive::termion().map_err(|_| "Could not initialize terminal")?;
-    siv.set_theme(tui::theme());
-    siv.add_global_callback('q', |s| s.quit());
-
-    let mut list_view = SelectView::new()
-        .on_submit(|cursive: &mut Cursive, value: &u64| {
-            let c: char = from_u64(*value)
-                .expect( "Could not parse character");
-            cursive.add_layer(tui::save_prompt(c));
-        });
-
-    for (description, v) in results {
-        if let Some(character) = from_u64(v) {
-            let line = format!("{} = {:04X}, {}", character, v, description);
-            list_view.add_item(line, v);
-        } else {
-            log::warn!("Index number {} could not be decoded to a character", v);
-        }
-    }
-
-    let list_view = OnEventView::new(list_view)
-        .on_pre_event_inner('k', |s, _| {
-            s.select_up(1);
-            Some(EventResult::Consumed(None))
-        })
-        .on_pre_event_inner('j', |s, _| {
-            s.select_down(1);
-            Some(EventResult::Consumed(None))
-        });
-    let list_view = ScrollView::new(list_view);
-
+    let results = tui::search(query);
+    let mut siv = tui::initialize_cursive().ok_or("Could not initialize terminal")?;
+    let list_view = character_search(results.into_iter());
     siv.add_fullscreen_layer(list_view);
     siv.run();
     Ok(())
-}
-
-mod tui {
-    use cursive::{
-        Cursive,
-        theme::Theme,
-        views::*,
-        view::*,
-    };
-    use crate::store::Store;
-
-    pub fn theme() -> Theme {
-        let mut theme = Theme::default();
-        theme.shadow = false;
-        theme
-    }
-
-    pub fn save_prompt(val_to_save: char) -> Dialog {
-        Dialog::new()
-            .title("Save to")
-            .padding((1, 1, 1, 0))
-            .content(
-                EditView::new()
-                    .on_submit(move |cursive, var_name| save(cursive, var_name, val_to_save))
-                    .with_id("name")
-                    .fixed_width(20),
-            )
-            .button("Ok", move |s| {
-                let name = s.call_on_id(
-                    "name",
-                    |view: &mut EditView| view.get_content(),
-                ).unwrap();
-                save(s, &name, val_to_save);
-            })
-    }
-
-    fn save(s: &mut Cursive, var_name: &str, value: char) {
-        if var_name.is_empty() {
-            s.add_layer(Dialog::info("Enter a var name"));
-        } else {
-            let mut store = Store::load_file()
-                .expect("Error loading Store file.");
-            store.saved.insert(var_name.to_string(), value);
-            store.save_file()
-                .expect("Error saving Store file.");
-
-            s.quit();
-        }
-    }
 }
 
 fn run_lookup<'a>(matches: &ArgMatches<'a>) -> MainResult<()> {
