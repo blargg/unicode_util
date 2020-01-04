@@ -60,6 +60,7 @@ pub fn character_search<I>(results: I) -> impl IntoBoxedView
                     .ok();
             })
             .fixed_height(1)
+            .min_width(10)
         )
 }
 
