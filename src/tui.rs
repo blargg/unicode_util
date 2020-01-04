@@ -46,14 +46,22 @@ pub fn character_search<I>(results: I) -> impl IntoBoxedView
         .on_pre_event_inner('j', |s, _| {
             s.get_mut().select_down(1);
             Some(EventResult::Consumed(None))
+        })
+        .on_event('/', |s| {
+            s.focus(&Selector::Id("search"))
+                .expect("could not focus search");
         });
 
     let scroll_view = ScrollView::new(list_view);
 
     LinearLayout::vertical()
         .child(scroll_view)
-        .child(EditView::new()
-            .content("test")
+        .child(search_view())
+}
+
+fn search_view() -> impl View {
+    OnEventView::new(
+        EditView::new()
             .on_submit(|cursive, s| {
                 cursive.call_on_id("select", |v: &mut SelectView<u64>| update_search(v, s));
                 cursive.focus(&Selector::Id("select"))
@@ -61,7 +69,11 @@ pub fn character_search<I>(results: I) -> impl IntoBoxedView
             })
             .fixed_height(1)
             .min_width(10)
-        )
+            .with_id("search")
+    ).on_event(Key::Esc, |s| {
+        s.focus(&Selector::Id("select"))
+            .expect("could not focus select");
+    } )
 }
 
 fn update_search(view: &mut SelectView<u64>, query: &str) {
