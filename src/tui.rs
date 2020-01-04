@@ -97,23 +97,25 @@ fn add_items<I>(view: &mut SelectView<u64>, items: I)
     }
 }
 
-pub fn save_prompt(val_to_save: char) -> Dialog {
-    Dialog::new()
-        .title("Save to")
-        .padding((1, 1, 1, 0))
-        .content(
-            EditView::new()
-                .filler(" ")
-                .on_submit(move |cursive, var_name| save(cursive, var_name, val_to_save))
-                .fixed_width(20),
-        )
-        .button("Ok", move |s| {
-            let name = s.call_on_id(
-                "name",
-                |view: &mut EditView| view.get_content(),
-            ).unwrap();
-            save(s, &name, val_to_save);
-        })
+pub fn save_prompt(val_to_save: char) -> impl IntoBoxedView {
+    OnEventView::new(
+        Dialog::new()
+            .title("Save to")
+            .padding((1, 1, 1, 0))
+            .content(
+                EditView::new()
+                    .filler(" ")
+                    .on_submit(move |cursive, var_name| save(cursive, var_name, val_to_save))
+                    .fixed_width(20),
+            )
+            .button("Ok", move |s| {
+                let name = s.call_on_id(
+                    "name",
+                    |view: &mut EditView| view.get_content(),
+                ).unwrap();
+                save(s, &name, val_to_save);
+            })
+    ).on_event(Key::Esc, |s| {s.pop_layer();} )
 }
 
 fn save(s: &mut Cursive, var_name: &str, value: char) {
