@@ -43,7 +43,15 @@ pub fn character_search<I>(results: I) -> impl IntoBoxedView
             s.get_mut().select_up(1);
             Some(EventResult::Consumed(None))
         })
+        .on_pre_event_inner(Key::Up, |s, _| {
+            s.get_mut().select_up(1);
+            Some(EventResult::Consumed(None))
+        })
         .on_pre_event_inner('j', |s, _| {
+            s.get_mut().select_down(1);
+            Some(EventResult::Consumed(None))
+        })
+        .on_pre_event_inner(Key::Down, |s, _| {
             s.get_mut().select_down(1);
             Some(EventResult::Consumed(None))
         })
