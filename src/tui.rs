@@ -1,14 +1,8 @@
 use crate::from_u64;
-use cursive::{
-    Cursive,
-    event::*,
-    theme::Theme,
-    views::*,
-    view::*,
-};
+use crate::store::Store;
+use cursive::{event::*, theme::Theme, view::*, views::*, Cursive};
 use fst::*;
 use fst_regex::Regex;
-use crate::store::Store;
 
 pub fn theme() -> Theme {
     let mut theme = Theme::default();
@@ -27,14 +21,13 @@ pub fn initialize_cursive() -> Option<Cursive> {
 }
 
 pub fn character_search<I>(results: I) -> impl IntoBoxedView
-    where I: Iterator<Item=(String, u64)>
+where
+    I: Iterator<Item = (String, u64)>,
 {
-    let mut list_view = SelectView::new()
-        .on_submit(|cursive: &mut Cursive, value: &u64| {
-            let c: char = from_u64(*value)
-                .expect( "Could not parse character");
-            cursive.add_layer(save_prompt(c));
-        });
+    let mut list_view = SelectView::new().on_submit(|cursive: &mut Cursive, value: &u64| {
+        let c: char = from_u64(*value).expect("Could not parse character");
+        cursive.add_layer(save_prompt(c));
+    });
     add_items(&mut list_view, results);
     let list_view = list_view.with_id("select");
 
@@ -72,16 +65,16 @@ fn search_view() -> impl View {
         EditView::new()
             .on_submit(|cursive, s| {
                 cursive.call_on_id("select", |v: &mut SelectView<u64>| update_search(v, s));
-                cursive.focus(&Selector::Id("select"))
-                    .ok();
+                cursive.focus(&Selector::Id("select")).ok();
             })
             .fixed_height(1)
             .min_width(10)
-            .with_id("search")
-    ).on_event(Key::Esc, |s| {
+            .with_id("search"),
+    )
+    .on_event(Key::Esc, |s| {
         s.focus(&Selector::Id("select"))
             .expect("could not focus select");
-    } )
+    })
 }
 
 fn update_search(view: &mut SelectView<u64>, query: &str) {
@@ -94,8 +87,7 @@ pub fn search(query: &str) -> Vec<(String, u64)> {
     // Modify the regex
     // Case insensitive, and allows leading and trailing characters
     let regex_string = format!("(?i).*{}.*", query);
-    let re = Regex::new(regex_string.as_str())
-        .expect("regex compile");
+    let re = Regex::new(regex_string.as_str()).expect("regex compile");
 
     let unicode_map = crate::mk_map();
     unicode_map
@@ -106,7 +98,8 @@ pub fn search(query: &str) -> Vec<(String, u64)> {
 }
 
 fn add_items<I>(view: &mut SelectView<u64>, items: I)
-    where I: Iterator<Item=(String, u64)>
+where
+    I: Iterator<Item = (String, u64)>,
 {
     for (description, v) in items {
         if let Some(character) = from_u64(v) {
@@ -130,24 +123,24 @@ pub fn save_prompt(val_to_save: char) -> impl IntoBoxedView {
                     .fixed_width(20),
             )
             .button("Ok", move |s| {
-                let name = s.call_on_id(
-                    "name",
-                    |view: &mut EditView| view.get_content(),
-                ).unwrap();
+                let name = s
+                    .call_on_id("name", |view: &mut EditView| view.get_content())
+                    .unwrap();
                 save(s, &name, val_to_save);
-            })
-    ).on_event(Key::Esc, |s| {s.pop_layer();} )
+            }),
+    )
+    .on_event(Key::Esc, |s| {
+        s.pop_layer();
+    })
 }
 
 fn save(s: &mut Cursive, var_name: &str, value: char) {
     if var_name.is_empty() {
         s.add_layer(Dialog::info("Enter a var name"));
     } else {
-        let mut store = Store::load_file()
-            .expect("Error loading Store file.");
+        let mut store = Store::load_file().expect("Error loading Store file.");
         store.saved.insert(var_name.to_string(), value);
-        store.save_file()
-            .expect("Error saving Store file.");
+        store.save_file().expect("Error saving Store file.");
 
         s.quit();
     }

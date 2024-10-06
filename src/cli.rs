@@ -18,8 +18,8 @@ fn get_subcommand<'a, 'b>() -> App<'a, 'b> {
         .about("Gets a value saved by set.")
         .arg(
             Arg::with_name("VAR")
-            .required(true)
-            .help("Variable to retrieve. Can be saved with unicode_util set.")
+                .required(true)
+                .help("Variable to retrieve. Can be saved with unicode_util set."),
         )
 }
 
@@ -28,8 +28,8 @@ fn search_subcommand<'a, 'b>() -> App<'a, 'b> {
         .about("Search for a value, and save it for later use.")
         .arg(
             Arg::with_name("QUERY")
-            .required(false)
-            .help("search expression")
+                .required(false)
+                .help("search expression"),
         )
 }
 
@@ -38,8 +38,8 @@ fn lookup_subcommand<'a, 'b>() -> App<'a, 'b> {
         .about("Converts a character code to an actual character")
         .arg(
             Arg::with_name("CODE")
-            .required(true)
-            .help("utf-8 character code")
+                .required(true)
+                .help("utf-8 character code"),
         )
 }
 
@@ -48,8 +48,8 @@ fn encode_subcommand<'a, 'b>() -> App<'a, 'b> {
         .about("Converts a character into a character code")
         .arg(
             Arg::with_name("CHARACTER")
-            .required(true)
-            .help("utf-8 character")
+                .required(true)
+                .help("utf-8 character"),
         )
 }
 
@@ -58,8 +58,8 @@ fn generate_completions_subcommand<'a, 'b>() -> App<'a, 'b> {
         .about("Generates completion files for some common shell programs")
         .arg(
             Arg::with_name("SHELL")
-            .required(true)
-            .possible_values(&["bash", "zsh", "fish", "powershell"])
-            .help("Specifies the shell program to generate completions for.")
+                .required(true)
+                .possible_values(&["bash", "zsh", "fish", "powershell"])
+                .help("Specifies the shell program to generate completions for."),
         )
 }

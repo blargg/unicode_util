@@ -1,10 +1,10 @@
 use fst::*;
 use std::{
+    env,
     fs::File,
     io::{self, BufReader},
     path::Path,
     process::Command,
-    env,
 };
 use xml::{
     attribute::OwnedAttribute,
@@ -54,15 +54,12 @@ fn download_ucd_all(dest_path: &str) {
     if !Path::new(dest_path).is_file() {
         println!("{} is not cached, downloading", dest_path);
         let mut cmd = Command::new("curl");
-        cmd
-            .arg("-vs")
+        cmd.arg("-vs")
             .arg(format!("-o{}", dest_path))
             .arg("--create-dirs")
             .arg(url);
         println!("curl command: {:?}", cmd);
-        let status = cmd
-            .status()
-            .expect("failed to download unicode data");
+        let status = cmd.status().expect("failed to download unicode data");
         assert!(status.success(), "curl exited with a non zero status");
     }
 }
@@ -91,13 +88,14 @@ fn parse_file(ucd_xml_path: &str) -> io::Result<Vec<(String, u64)>> {
 
     for e in parser.into_iter() {
         match e {
-            Ok(XmlEvent::StartElement { name, attributes, ..}) => {
+            Ok(XmlEvent::StartElement {
+                name, attributes, ..
+            }) => {
                 if name.local_name == "char" {
                     // TODO support characters with aliases
                     if let Some(desc) = get_attr(&attributes, "na") {
                         let code = get_attr(&attributes, "cp");
-                        let c = code
-                            .and_then(|code| u64::from_str_radix(code.as_str(), BASE).ok());
+                        let c = code.and_then(|code| u64::from_str_radix(code.as_str(), BASE).ok());
                         if let Some(character) = c {
                             associations.push((desc, character));
                         }
