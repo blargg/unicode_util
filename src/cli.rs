@@ -28,7 +28,7 @@ fn search_subcommand<'a, 'b>() -> App<'a, 'b> {
         .about("Search for a value, and save it for later use.")
         .arg(
             Arg::with_name("QUERY")
-            .required(true)
+            .required(false)
             .help("search expression")
         )
 }

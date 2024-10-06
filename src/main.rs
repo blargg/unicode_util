@@ -2,17 +2,10 @@ mod cli;
 mod store;
 mod tui;
 
-use crate::{
-    store::Store,
-    tui::character_search,
-};
+use crate::{store::Store, tui::character_search};
 use clap::*;
 use fst::*;
-use std::{
-    char::from_u32,
-    convert::TryFrom,
-    process::exit,
-};
+use std::{char::from_u32, convert::TryFrom, process::exit};
 
 static FST: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/map.fst"));
 
@@ -60,9 +53,10 @@ fn mk_map() -> Map {
 
 fn run_get<'a>(matches: &ArgMatches<'a>) -> MainResult<()> {
     let var_name = matches.value_of("VAR").unwrap();
-    let store = Store::load_file()
-        .map_err(|_| format!("Error loading Store file."))?;
-    let val = store.saved.get(&var_name.to_string())
+    let store = Store::load_file().map_err(|_| format!("Error loading Store file."))?;
+    let val = store
+        .saved
+        .get(&var_name.to_string())
         .ok_or(format!("{:?} is not saved.", var_name))?;
     println!("{}", val);
 
@@ -70,7 +64,7 @@ fn run_get<'a>(matches: &ArgMatches<'a>) -> MainResult<()> {
 }
 
 fn run_search<'a>(matches: &ArgMatches<'a>) -> MainResult<()> {
-    let query = matches.value_of("QUERY").unwrap();
+    let query = matches.value_of("QUERY").unwrap_or("");
     let results = tui::search(query);
     let mut siv = tui::initialize_cursive().ok_or("Could not initialize terminal")?;
     let list_view = character_search(results.into_iter());
@@ -81,15 +75,16 @@ fn run_search<'a>(matches: &ArgMatches<'a>) -> MainResult<()> {
 
 fn run_lookup<'a>(matches: &ArgMatches<'a>) -> MainResult<()> {
     let code = matches.value_of("CODE").unwrap();
-    let c = parse_hex_str(code)
-        .ok_or(format!("Could not parse \"{}\" into a character", code))?;
+    let c = parse_hex_str(code).ok_or(format!("Could not parse \"{}\" into a character", code))?;
     println!("{}", c);
     Ok(())
 }
 
 fn run_encode<'a>(matches: &ArgMatches<'a>) -> MainResult<()> {
     let char_str = matches.value_of("CHARACTER").unwrap();
-    let c = char_str.chars().next()
+    let c = char_str
+        .chars()
+        .next()
         .ok_or(format!("Encountered empty string"))?;
     println!("{:04X}", c as u32);
     Ok(())
@@ -105,9 +100,7 @@ fn run_generate_completions<'a>(matches: &ArgMatches<'a>) -> MainResult<()> {
         "zsh" => Zsh,
         "fish" => Fish,
         "powershell" => PowerShell,
-        other => {
-            return Err(format!("{} shell not supported.", other))
-        }
+        other => return Err(format!("{} shell not supported.", other)),
     };
     cli::app_arguments().gen_completions_to("unicode_util", shell_type, &mut std::io::stdout());
     Ok(())
@@ -118,11 +111,8 @@ fn parse_hex_str(s: &str) -> Option<char> {
     from_u64(n)
 }
 
-
 fn from_u64(n: u64) -> Option<char> {
-    u32::try_from(n)
-        .ok()
-        .and_then(|n32| from_u32(n32))
+    u32::try_from(n).ok().and_then(|n32| from_u32(n32))
 }
 
 type MainResult<A> = std::result::Result<A, String>;
