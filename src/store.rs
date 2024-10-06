@@ -9,6 +9,7 @@ pub struct Store {
 }
 
 #[derive(Debug)]
+#[allow(dead_code)]
 pub enum StoreErr {
     Io(io::Error),
     TomlDe(toml::de::Error),
