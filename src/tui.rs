@@ -56,8 +56,8 @@ where
     let scroll_view = ScrollView::new(list_view);
 
     LinearLayout::vertical()
-        .child(scroll_view)
         .child(search_view())
+        .child(scroll_view)
 }
 
 fn search_view() -> impl View {

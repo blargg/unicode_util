@@ -4,6 +4,7 @@ mod tui;
 
 use crate::{store::Store, tui::character_search};
 use clap::*;
+use cursive::view::Selector;
 use fst::*;
 use std::{char::from_u32, convert::TryFrom, process::exit};
 
@@ -70,6 +71,8 @@ fn run_search<'a>(matches: &ArgMatches<'a>) -> MainResult<()> {
     let list_view = character_search(results.into_iter());
     siv.add_fullscreen_layer(list_view);
     siv.run();
+    siv.focus(&Selector::Id("search"))
+        .expect("Failed to focus the search widget on initialization");
     Ok(())
 }
 
